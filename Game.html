@@ -1,0 +1,461 @@
+<head>
+	<title>Super Mario!</title>
+	<meta charset="UTF-8">
+</head>
+<body style="background-color: rgb(56, 56, 56);">
+<br>
+<h1 style="color:white">Super Mario!</h1>
+<canvas id="myCanvas" width="1000" height="500" style="border:10px solid #000000;"></canvas>
+
+<h1 style="color:white">How to play:</h1>
+<p style="color:white">Right/Left Arrow - Move right and left</p>
+<p style="color:white">Spacebar/Up Arrow - Jump</p>
+<p style="color:white">Control - Throw a fireball</p>
+<button style="background-color:rgb(85, 202, 97);width:150px;height:50px"  type="button" onclick="location.reload()">Play Again!</button>
+<script type="text/javascript">
+
+//-------------------------------------------------------------------------------------------
+class Sprite
+{
+	constructor(x, y, image_url)
+	{
+		this.x = x;
+		this.y = y;
+		this.image = new Image();
+		this.image.src = image_url;
+	}
+
+	isPipe() 	 {return false;}
+	isGoomba()   {return false;}
+	isFireball() {return false;}
+}
+//-------------------------------------------------------------------------------------------
+class Pipe extends Sprite
+{
+	constructor(x, y, image_url)
+	{
+		super(x, y, image_url);
+		this.w = 55;
+		this.h = 400;
+	}
+	
+	update() //sit_still
+	{
+	}
+
+	isPipe()
+	{
+		return true;
+	}
+}
+
+//-------------------------------------------------------------------------------------------
+class Mario extends Sprite
+{
+	constructor(x, y, image_url)
+	{
+		super(x, y, image_url);
+		this.w = 60;
+		this.h = 95;
+		this.vert_velocity = 0;
+		this.numFramesInAir = 0;
+		this.currentImage = 0;
+		//Loading all Mario running images
+		this.image1 = new Image(); this.image1.src = "mario1.png";
+		this.image2 = new Image(); this.image2.src = "mario2.png";
+		this.image3 = new Image(); this.image3.src = "mario3.png";
+		this.image4 = new Image(); this.image4.src = "mario4.png";
+		this.image5 = new Image(); this.image5.src = "mario5.png";
+		this.image6 = new Image(); this.image6.src = "mario6.png";
+		this.image7 = new Image(); this.image7.src = "mario7.png";
+		//Jumping mario image
+		this.jumpingImage = new Image(); this.jumpingImage.src = "mariojump.png";
+	}
+	
+	changeImageState()
+	{
+		this.currentImage++;
+		if(this.currentImage > 69)
+		{
+			this.currentImage = 0;
+		}
+	}
+
+	setPreviousPosition()
+	{
+		this.prevx = this.x;
+		this.prevy = this.y;
+	}
+
+	getOutOfPipe(pipe)
+	{
+		//Mario coming from top
+		if((this.prevy + this.h) < pipe.y)
+		{
+			this.y = pipe.y - this.h - 1;
+			this.vert_velocity = 0; //Stop Mario from falling
+			this.numFramesInAir = 0; //Allow Mario to jump off pipe
+			
+		}
+		//Mario coming from bottom
+		else if(this.prevy > (pipe.y+pipe.h))
+		{    
+			this.y = pipe.y + pipe.h;
+		}
+		else
+		{
+			//Mario coming from left
+			if(this.prevx < pipe.x)
+			{
+				this.x = pipe.x - this.w - 1;
+			}
+			//Mario coming from right
+			if(this.prevx > pipe.x)
+			{
+				this.x = pipe.x + pipe.w + 1;
+			}
+		}
+	}
+
+	update()
+	{
+		//Mario gravity
+		this.vert_velocity += 0.20;
+		this.y += this.vert_velocity;
+		this.numFramesInAir++;
+		if(this.y >= 400 - this.h)
+		{
+			this.vert_velocity = 0;
+			this.y = 400 - this.h; //Snap back to ground
+			this.numFramesInAir = 0;
+		}
+
+		//Animate Mario
+		if(this.currentImage <= 10)
+			this.image = this.image1;
+		else if(this.currentImage <= 20)
+			this.image = this.image2;
+		else if(this.currentImage <= 30)
+			this.image = this.image3;
+		else if(this.currentImage <= 40)
+			this.image = this.image4;
+		else if(this.currentImage <= 50)
+			this.image = this.image5;
+		else if(this.currentImage <= 60)
+			this.image = this.image6;
+		else if(this.currentImage < 70)
+			this.image = this.image7;
+		else
+			this.image.src = "mario1.png";
+		
+		//Animate Mario's jump
+		if(this.numFramesInAir > 5)
+			this.image = this.jumpingImage;
+	}
+}
+
+//-------------------------------------------------------------------------------------------
+class Goomba extends Sprite
+{
+	constructor(x, y, image_url)
+	{
+		super(x, y, image_url);
+		this.w = 37;
+		this.h = 45;
+		//Movement variables
+		this.horz_velocity = 0.4;
+		this.vert_velocity = 0;
+		//Goomba fire image
+		this.goombaFire = new Image();
+		this.goombaFire.src = "goomba_fire.png";
+	}
+	
+	setPreviousPosition()
+	{
+		this.prevx = this.x;
+		this.prevy = this.y;
+	}
+
+	onFire()
+	{
+		this.horz_velocity = 0; //Stop
+		this.image = this.goombaFire; //On fire
+	}
+ 
+	isGoomba()
+	{
+		return true;
+	}
+
+	update()
+	{
+		this.setPreviousPosition();
+		
+		//Gravity and horizontal movement
+		this.x += this.horz_velocity;
+		this.vert_velocity += 1;
+		this.y += this.vert_velocity;
+		if(this.y > 400 - this.h)
+		{
+			this.vert_velocity = 0;
+			this.y = 400 - this.h; //Snap back to ground
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------
+class Fireball extends Sprite
+{
+	constructor(x, y, image_url)
+	{
+		super(x, y, image_url);
+		this.w = 47;
+		this.h = 47;
+		this.horz_velocity = 5;
+		this.vert_velocity = 0;
+	}
+	
+	isFireball()
+	{
+		return true;
+	}
+
+	update()
+	{
+		//Gravity and horizontal movement
+		this.x += this.horz_velocity;
+		this.vert_velocity += 0.25;
+		this.y += this.vert_velocity;
+		if(this.y > 400 - this.h)
+		{
+			this.y = 400 - this.h; //Snap back to ground 
+			this.vert_velocity = -this.vert_velocity; //Bounce the fireball off the ground
+		}
+
+	}
+}
+
+//-------------------------------------------------------------------------------------------
+class Model
+{
+	constructor(mario, goomba)
+	{
+		this.mario = mario;
+		this.goomba = goomba;
+		this.spriteList = []; //Array list creation
+		//Create Mario
+		this.mario = new Mario(50, 305, "mario1.png");
+		this.spriteList.push(this.mario);
+		//Create Pipes
+		this.spriteList.push(new Pipe(-500, 300, "pipe.png"), new Pipe(-100, 100, "pipe.png"),
+		new Pipe(190, 350, "pipe.png"), new Pipe(400, 310, "pipe.png"), new Pipe(455, 250, "pipe.png"),
+		new Pipe(700, 200, "pipe.png"), new Pipe(1000, 100, "pipe.png"));
+		//Create Goombas
+		this.goomba1 = new Goomba(-300, 300, "goomba.png"); this.spriteList.push(this.goomba1);
+		this.goomba2 = new Goomba(150, 300, "goomba.png");  this.spriteList.push(this.goomba2);
+		this.goomba3 = new Goomba(300, 300, "goomba.png"); 	this.spriteList.push(this.goomba3);
+		this.goomba4 = new Goomba(510, 300, "goomba.png");  this.spriteList.push(this.goomba4);
+		this.goomba5 = new Goomba(950, 300, "goomba.png");  this.spriteList.push(this.goomba5);
+	}
+
+	//Checks if Sprite 1 is not "not colliding" with Sprite 2
+	checkCollision(s1, s2)
+	{
+		if ((s1.x+s1.w) < s2.x) //S1'S RIGHT is less than S2'S LEFT
+			return false; //S1 is NOT colliding
+		if (s1.x > (s2.x+s2.w)) //S1'S LEFT is greater than S2'S RIGHT
+			return false;
+		if ((s1.y+s1.h) < s2.y) //S1'S BOTTOM is greater than S2'S TOP
+			return false;
+		if (s1.y > (s2.y+s2.h)) //S1'S TOP is less than S2'S BOTTOM
+			return false;
+		else
+			return true; //S1 IS colliding
+	}
+
+	throwFireball()
+	{
+		this.spriteList.push(new Fireball(this.mario.x + this.mario.w - 15, this.mario.y + 15, "fireball.png")); //Creates new fireball at mario's chest
+	}
+
+	update()
+	{	
+		//Update sprites
+		for(let i = 0; i < this.spriteList.length; i++)
+		{
+			this.spriteList[i].update();
+		}
+
+		//Sprite interactions
+		for(let i = 0; i < this.spriteList.length; i++)
+		{
+			//Pipe collision detection
+			if(this.spriteList[i].isPipe())
+			{
+				//Mario-Pipe detection
+				let checkMario = this.checkCollision(this.mario, this.spriteList[i]);
+				if(checkMario)
+					this.mario.getOutOfPipe(this.spriteList[i]); //Remove mario from pipe
+			}
+
+			//Goomba collision detection
+			if(this.spriteList[i].isGoomba())
+			{
+				for(let j = 0; j < this.spriteList.length; j++)
+				{
+					//Goomba-Pipe detection
+					if(this.spriteList[j].isPipe())
+					{
+						let checkGoomba = this.checkCollision(this.spriteList[i], this.spriteList[j]);
+						if(checkGoomba)
+						{
+							
+							this.spriteList[i].horz_velocity = -this.spriteList[i].horz_velocity; //Bounce the goomba off the pipe
+						}
+					}
+
+					//Goomba-Fireball detection
+					if(this.spriteList[j].isFireball())
+					{
+						let checkFireball = this.checkCollision(this.spriteList[i], this.spriteList[j]);
+						if(checkFireball)
+						{
+							this.spriteList.splice(j, 1); //Delete fireball
+							this.spriteList[i].onFire(); //Set goomba on fire and stop movement
+							setTimeout(() =>{ 
+								this.spriteList.splice(i, 1); //Wait for 1 second before removing goomba
+							}, 1000);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------
+class View
+{
+	constructor(model)
+	{
+		this.model = model;
+		this.canvas = document.getElementById("myCanvas");
+		this.scrollPos = 0;
+	}
+
+	update()
+	{
+		let ctx = this.canvas.getContext("2d");
+		ctx.clearRect(0, 0, 100, 500);
+		//Draw the sky
+		ctx.fillStyle = "#00c6ff";
+		ctx.fillRect(0, 0, 1000, 500);
+		//Draw the ground
+		ctx.fillStyle = "#045c00";
+		ctx.fillRect(0, 400, 1000, 100);
+		//Set the scroll position
+		this.scrollPos = this.model.mario.x - 100;
+		//Loop through all sprites and draw them with each update
+		for(let i = 0; i < this.model.spriteList.length; i++)
+		{
+			let sprite = this.model.spriteList[i];
+			ctx.drawImage(sprite.image, sprite.x - this.scrollPos, sprite.y);
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------
+class Controller
+{
+	constructor(model, view)
+	{
+		this.model = model;
+		this.view = view;
+		this.key_right = false;
+		this.key_left = false;
+		this.key_up = false;
+		this.key_down = false;
+		this.spacebar = false;
+		this.control = false;
+		let self = this;
+		document.addEventListener('keydown', function(event) { self.keyDown(event); }, false);
+		document.addEventListener('keyup', function(event) { self.keyUp(event); }, false);
+	}
+
+	keyDown(event)
+	{
+		if(event.keyCode == 39) this.key_right = true;
+		else if(event.keyCode == 37) this.key_left = true;
+		else if(event.keyCode == 38) this.key_up = true;
+		else if(event.keyCode == 40) this.key_down = true;
+		else if(event.keyCode == 32) this.spacebar = true;
+		else if(event.keyCode == 17) this.control = true;
+		
+	}
+
+	keyUp(event)
+	{
+		if(event.keyCode == 39) this.key_right = false;
+		else if(event.keyCode == 37) this.key_left = false;
+		else if(event.keyCode == 38) this.key_up = false;
+		else if(event.keyCode == 40) this.key_down = false;
+		else if(event.keyCode == 32) this.spacebar = false;
+		else if(event.keyCode == 17) 
+		{
+			this.control = false;
+			this.model.throwFireball();
+		}
+	}
+
+	update()
+	{
+		this.model.mario.setPreviousPosition();
+
+		if(this.key_right) 
+		{	
+			this.model.mario.x += 2;
+			this.view.scrollPos += 2;
+			this.model.mario.changeImageState();
+			this.model.mario.rightFacing = true;
+		}
+		if(this.key_left)
+		{
+			this.model.mario.x -= 2;
+			this.view.scrollPos -= 2;
+			this.model.mario.changeImageState();
+			this.model.mario.rightFacing = false;
+		}
+		if(this.key_up || this.spacebar)
+		{
+			if(this.model.mario.numFramesInAir < 20)
+			{
+				this.model.mario.vert_velocity = -8;
+			}
+		} 
+	}
+}
+
+//-------------------------------------------------------------------------------------------
+class Game
+{
+	constructor()
+	{
+		this.model = new Model();
+		this.view = new View(this.model);
+		this.controller = new Controller(this.model, this.view);
+	}
+
+	onTimer()
+	{
+		this.controller.update();
+		this.model.update();
+		this.view.update();
+	}
+}
+
+let game = new Game();
+let timer = setInterval(function() { game.onTimer(); }, 10);
+
+</script> 
+
+</body>
